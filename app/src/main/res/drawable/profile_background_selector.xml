@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/drawable/profile_background_selector.xml -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- When pressed/hovered -->
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="#33000000" /> <!-- 20% black overlay -->
+        </shape>
+    </item>
+
+    <!-- When focused -->
+    <item android:state_focused="true">
+        <shape android:shape="oval">
+            <solid android:color="#22000000" /> <!-- 13% black overlay -->
+        </shape>
+    </item>
+
+    <!-- Default state -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+</selector>
