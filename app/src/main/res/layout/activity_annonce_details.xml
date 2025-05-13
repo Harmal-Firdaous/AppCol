@@ -74,6 +74,29 @@
             android:textStyle="italic"
             android:paddingTop="8dp" />
 
+        <!-- Location Information -->
+        <LinearLayout
+            android:id="@+id/locationContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Localisation"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/locationText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Pays / Ville / Rue"
+                android:textSize="14sp" />
+        </LinearLayout>
+
         <!-- Rating -->
         <RatingBar
             android:id="@+id/ratingAnnonce"
@@ -83,7 +106,8 @@
             android:numStars="5"
             android:stepSize="0.5"
             android:rating="0"
-            android:theme="@style/GoldRatingBar" />
+            android:theme="@style/GoldRatingBar"
+            android:layout_marginTop="8dp" />
 
         <!-- Button -->
         <Button

@@ -22,8 +22,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 public class AnnonceDetailsActivity extends AppCompatActivity {
 
     private static final String TAG = "AnnonceDetailsActivity";
+
     private ImageView imageAnnonce, imageProprietaire;
-    private TextView nomProprietaire, titreAnnonce, descriptionAnnonce, annotationAnnonce;
+    private TextView nomProprietaire, titreAnnonce, descriptionAnnonce, annotationAnnonce, locationText;
     private RatingBar ratingAnnonce;
     private Button buttonContacter;
 
@@ -34,20 +35,19 @@ public class AnnonceDetailsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_annonce_details);
 
-        // Initialize Firestore
         db = FirebaseFirestore.getInstance();
 
-        // Initialize UI elements
+        // UI binding
         imageAnnonce = findViewById(R.id.imageAnnonce);
         imageProprietaire = findViewById(R.id.imageProprietaire);
         nomProprietaire = findViewById(R.id.nomProprietaire);
         titreAnnonce = findViewById(R.id.titreAnnonce);
         descriptionAnnonce = findViewById(R.id.descriptionAnnonce);
         annotationAnnonce = findViewById(R.id.annotationAnnonce);
+        locationText = findViewById(R.id.locationText);
         ratingAnnonce = findViewById(R.id.ratingAnnonce);
         buttonContacter = findViewById(R.id.buttonContacter);
 
-        // Get annonce ID from intent
         String annonceId = getIntent().getStringExtra("annonceId");
 
         if (annonceId != null) {
@@ -60,16 +60,9 @@ public class AnnonceDetailsActivity extends AppCompatActivity {
 
     private void loadAnnonceDetails(String annonceId) {
         db.collection("annonces").document(annonceId).get()
-                .addOnSuccessListener(document -> {
-                    if (document.exists()) {
-                        displayAnnonceDetails(document);
-                    } else {
-                        Toast.makeText(this, "Annonce non trouvée", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
-                })
+                .addOnSuccessListener(this::displayAnnonceDetails)
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading annonce details", e);
+                    Log.e(TAG, "Erreur lors du chargement de l'annonce", e);
                     Toast.makeText(this, "Erreur lors du chargement", Toast.LENGTH_SHORT).show();
                     finish();
                 });
@@ -77,31 +70,50 @@ public class AnnonceDetailsActivity extends AppCompatActivity {
 
     private void displayAnnonceDetails(@NonNull DocumentSnapshot document) {
         try {
-            // Get data from document
             String titre = document.getString("titre");
             String description = document.getString("description");
             String annotation = document.getString("annotation");
             String imageUrl = document.getString("imageUrl");
             String imageBase64 = document.getString("imageBase64");
+
+            // Propriétaire
             String ownerName = document.getString("ownerName");
             String ownerEmail = document.getString("ownerEmail");
             String ownerId = document.getString("ownerId");
             String ownerProfileImage = document.getString("ownerProfileImage");
 
-            // Handle rating if available
-            float rating = 0f;
-            if (document.contains("rating")) {
-                Double ratingDouble = document.getDouble("rating");
-                if (ratingDouble != null) {
-                    rating = ratingDouble.floatValue();
-                }
+            // Location information
+            String country = document.getString("country");
+            String city = document.getString("city");
+            String street = document.getString("street");
+
+            // Format location text
+            StringBuilder locationBuilder = new StringBuilder();
+            if (country != null && !country.trim().isEmpty()) {
+                locationBuilder.append(country);
+            }
+            if (city != null && !city.trim().isEmpty()) {
+                if (locationBuilder.length() > 0) locationBuilder.append(" ");
+                locationBuilder.append(city);
+            }
+            if (street != null && !street.trim().isEmpty()) {
+                if (locationBuilder.length() > 0) locationBuilder.append(" ");
+                locationBuilder.append(street);
             }
 
-            // Set text values
-            titreAnnonce.setText(titre);
-            descriptionAnnonce.setText(description);
+            String locationString = locationBuilder.length() > 0 ?
+                    locationBuilder.toString() : "Localisation non spécifiée";
+            locationText.setText(locationString);
 
-            // Set annotation if available
+            // Log the owner name to help debug
+            Log.d(TAG, "Owner name: " + ownerName);
+            Log.d(TAG, "Location: " + locationString);
+
+            // Titre et description
+            titreAnnonce.setText(titre != null ? titre : "Sans titre");
+            descriptionAnnonce.setText(description != null ? description : "Pas de description");
+
+            // Annotation
             if (annotation != null && !annotation.isEmpty()) {
                 annotationAnnonce.setText(annotation);
                 annotationAnnonce.setVisibility(android.view.View.VISIBLE);
@@ -109,70 +121,64 @@ public class AnnonceDetailsActivity extends AppCompatActivity {
                 annotationAnnonce.setVisibility(android.view.View.GONE);
             }
 
-            // Set rating
-            ratingAnnonce.setRating(rating);
-
-            // Set owner name if available
-            if (ownerName != null && !ownerName.isEmpty()) {
+            // Nom du propriétaire with improved empty check
+            if (ownerName != null && !ownerName.trim().isEmpty()) {
                 nomProprietaire.setText(ownerName);
             } else {
                 nomProprietaire.setText("Propriétaire anonyme");
             }
 
-            // Load annonce image
+            // Image principale
             if (imageUrl != null && !imageUrl.isEmpty()) {
-                // Use Glide to load image from URL
-                Glide.with(this)
-                        .load(imageUrl)
+                Glide.with(this).load(imageUrl)
                         .placeholder(R.drawable.ic_launcher_background)
                         .into(imageAnnonce);
             } else if (imageBase64 != null && !imageBase64.isEmpty()) {
-                // Decode Base64 image
                 try {
                     byte[] decodedString = Base64.decode(imageBase64, Base64.DEFAULT);
                     Bitmap decodedBitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
                     imageAnnonce.setImageBitmap(decodedBitmap);
                 } catch (Exception e) {
-                    Log.e(TAG, "Error decoding image", e);
+                    Log.e(TAG, "Erreur de décodage image", e);
                     imageAnnonce.setImageResource(R.drawable.ic_launcher_background);
                 }
             } else {
-                // Use default image if no image available
                 imageAnnonce.setImageResource(R.drawable.ic_launcher_background);
             }
 
-            // Load owner profile image if available
+            // Image du propriétaire
             if (ownerProfileImage != null && !ownerProfileImage.isEmpty()) {
-                Glide.with(this)
-                        .load(ownerProfileImage)
+                Glide.with(this).load(ownerProfileImage)
                         .placeholder(R.drawable.ic_profile)
                         .into(imageProprietaire);
             } else {
                 imageProprietaire.setImageResource(R.drawable.ic_profile);
             }
 
-            // Save final values for use in button click listener
-            final String finalOwnerEmail = (ownerEmail != null && !ownerEmail.isEmpty()) ?
-                    ownerEmail : "";
-            final String finalOwnerId = (ownerId != null) ? ownerId : "";
-            final String finalOwnerName = (ownerName != null && !ownerName.isEmpty()) ?
-                    ownerName : "Propriétaire anonyme";
+            // Étoiles
+            float rating = 0f;
+            if (document.contains("rating")) {
+                Double ratingDouble = document.getDouble("rating");
+                if (ratingDouble != null) {
+                    rating = ratingDouble.floatValue();
+                }
+            }
+            ratingAnnonce.setRating(rating);
 
-            // Set up contact button to navigate to Messagerie instead of email
+            // Listener bouton contacter
             buttonContacter.setOnClickListener(v -> {
-                Intent messagerieIntent = new Intent(AnnonceDetailsActivity.this, Messagerie.class);
-                // Pass relevant information to the Messagerie activity
-                messagerieIntent.putExtra("receiverId", finalOwnerId);
-                messagerieIntent.putExtra("receiverName", finalOwnerName);
-                messagerieIntent.putExtra("receiverEmail", finalOwnerEmail);
+                Intent messagerieIntent = new Intent(this, Messagerie.class);
+                messagerieIntent.putExtra("receiverId", ownerId != null ? ownerId : "");
+                messagerieIntent.putExtra("receiverName", ownerName != null ? ownerName : "Propriétaire");
+                messagerieIntent.putExtra("receiverEmail", ownerEmail != null ? ownerEmail : "");
                 messagerieIntent.putExtra("annonceId", document.getId());
-                messagerieIntent.putExtra("annonceTitre", titre);
+                messagerieIntent.putExtra("annonceTitre", titre != null ? titre : "Sans titre");
                 startActivity(messagerieIntent);
             });
 
         } catch (Exception e) {
-            Log.e(TAG, "Error displaying annonce details", e);
-            Toast.makeText(this, "Erreur lors de l'affichage des détails", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Erreur lors de l'affichage des détails", e);
+            Toast.makeText(this, "Erreur d'affichage", Toast.LENGTH_SHORT).show();
         }
     }
 }

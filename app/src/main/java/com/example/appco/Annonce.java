@@ -12,16 +12,17 @@ public class Annonce {
     private double longitude;
     private String ownerName;
     private String ownerEmail;
-    private String ownerProfileImage;
+    private String ownerId; // Added ownerId field
     private long timestamp;
 
     // Empty constructor needed for Firestore
     public Annonce() {
     }
 
-    // Constructor for Firestore data
+    // Constructor for Firestore data - updated to include ownerName and ownerEmail
     public Annonce(String id, String imageBase64, String imageUrl, String titre, String description,
-                   float rating, double latitude, double longitude, long timestamp) {
+                   float rating, double latitude, double longitude, long timestamp,
+                   String ownerId, String ownerName, String ownerEmail) {
         this.id = id;
         this.imageBase64 = imageBase64;
         this.imageUrl = imageUrl;
@@ -31,6 +32,9 @@ public class Annonce {
         this.latitude = latitude;
         this.longitude = longitude;
         this.timestamp = timestamp;
+        this.ownerId = ownerId;
+        this.ownerName = ownerName;
+        this.ownerEmail = ownerEmail;
     }
 
     // Getter and setter methods
@@ -122,12 +126,12 @@ public class Annonce {
         this.ownerEmail = ownerEmail;
     }
 
-    public String getOwnerProfileImage() {
-        return ownerProfileImage;
+    public String getOwnerId() {
+        return ownerId;
     }
 
-    public void setOwnerProfileImage(String ownerProfileImage) {
-        this.ownerProfileImage = ownerProfileImage;
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 
     public long getTimestamp() {

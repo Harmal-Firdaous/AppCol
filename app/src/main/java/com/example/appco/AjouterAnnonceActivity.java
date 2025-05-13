@@ -27,6 +27,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -38,7 +40,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AjouterAnnonceActivity extends AppCompatActivity {
-
     private static final String TAG = "AjouterAnnonceActivity";
     private EditText editTitre, editDescription;
     private ImageView imagePreview, menuIcon, profileImage;
@@ -50,14 +51,16 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
     private String base64Image;
     private double latitude = 0.0;
     private double longitude = 0.0;
+    private String street = "";
+    private String city = "";
+    private String country = "";
+    private String fullAddress = "";
 
     private FirebaseFirestore db;
     private CollectionReference annoncesRef;
-
     private static final int REQUEST_IMAGE_CAPTURE = 1;
     private static final int REQUEST_CAMERA_PERMISSION = 100;
     private static final int REQUEST_LOCATION_PICKER = 200;
-
     // Maximum image size for Base64 encoding (to keep Firestore document under 1MB)
     private static final int MAX_IMAGE_SIZE = 500; // pixels for width/height
 
@@ -65,7 +68,6 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ajouter_annonce);
-
         Log.d(TAG, "onCreate: Starting AjouterAnnonceActivity");
 
         try {
@@ -116,7 +118,6 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
                             Toast.LENGTH_LONG).show();
                 }
             });
-
         } catch (Exception e) {
             Log.e(TAG, "Error in onCreate: " + e.getMessage(), e);
             Toast.makeText(this, "Erreur d'initialisation: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -128,7 +129,6 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
             PopupMenu popup = new PopupMenu(this, anchor);
             MenuInflater inflater = popup.getMenuInflater();
             inflater.inflate(R.menu.top_nav_menu, popup.getMenu());
-
             popup.setOnMenuItemClickListener(item -> {
                 int id = item.getItemId();
                 if (id == R.id.menu_home) {
@@ -138,6 +138,7 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
                     startActivity(new Intent(this, AnnoncesActivity.class));
                     return true;
                 } else if (id == R.id.menu_logout) {
+                    FirebaseAuth.getInstance().signOut();
                     startActivity(new Intent(this, Register.class));
                     return true;
                 }
@@ -208,10 +209,46 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
             }
         } else if (requestCode == REQUEST_LOCATION_PICKER && resultCode == RESULT_OK && data != null) {
             try {
+                // Get coordinates
                 latitude = data.getDoubleExtra("latitude", 0.0);
                 longitude = data.getDoubleExtra("longitude", 0.0);
-                selectedLocation.setText("Latitude : " + latitude + ", Longitude : " + longitude);
-                Log.d(TAG, "Location selected: " + latitude + ", " + longitude);
+
+                // Get address components
+                street = data.getStringExtra("street");
+                city = data.getStringExtra("city");
+                country = data.getStringExtra("country");
+                fullAddress = data.getStringExtra("fullAddress");
+
+                // Display the address information
+                StringBuilder locationText = new StringBuilder();
+
+                if (fullAddress != null && !fullAddress.isEmpty()) {
+                    locationText.append(fullAddress);
+                } else {
+                    // Build address manually from components
+                    if (street != null && !street.isEmpty()) {
+                        locationText.append(street);
+                    }
+
+                    if (city != null && !city.isEmpty()) {
+                        if (locationText.length() > 0) locationText.append(", ");
+                        locationText.append(city);
+                    }
+
+                    if (country != null && !country.isEmpty()) {
+                        if (locationText.length() > 0) locationText.append(", ");
+                        locationText.append(country);
+                    }
+
+                    // If we still don't have an address, fall back to coordinates
+                    if (locationText.length() == 0) {
+                        locationText.append("Latitude : ").append(latitude)
+                                .append(", Longitude : ").append(longitude);
+                    }
+                }
+
+                selectedLocation.setText(locationText.toString());
+                Log.d(TAG, "Location selected: " + locationText.toString());
             } catch (Exception e) {
                 Log.e(TAG, "Error processing location result: " + e.getMessage(), e);
                 Toast.makeText(this, "Erreur lors de la récupération de l'emplacement", Toast.LENGTH_SHORT).show();
@@ -223,8 +260,8 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
     private Bitmap getResizedBitmap(Bitmap bitmap, int maxSize) {
         int width = bitmap.getWidth();
         int height = bitmap.getHeight();
-
         float bitmapRatio = (float) width / (float) height;
+
         if (bitmapRatio > 1) {
             // Width is greater, so scale width to maxSize
             width = maxSize;
@@ -247,6 +284,8 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
 
     private void saveAnnonce() {
         Log.d(TAG, "saveAnnonce: Starting to save annonce");
+
+        // Get input values
         String titre = editTitre.getText().toString().trim();
         String description = editDescription.getText().toString().trim();
 
@@ -261,46 +300,72 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
             return;
         }
 
-        if (base64Image == null) {
+        if (base64Image == null || base64Image.isEmpty()) {
             Toast.makeText(this, "Veuillez prendre une photo", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (latitude == 0.0 || longitude == 0.0) {
+        if (latitude == 0.0 && longitude == 0.0) {
             Toast.makeText(this, "Veuillez choisir un emplacement", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        // Disable save button to prevent multiple submissions
+        btnSaveAnnonce.setEnabled(false);
         Toast.makeText(this, "Enregistrement en cours...", Toast.LENGTH_SHORT).show();
 
         try {
-            // Create annonce object with Base64 image
+            // Get current user
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            String userId = (user != null) ? user.getUid() : "anonymous";
+            String userEmail = (user != null && user.getEmail() != null) ? user.getEmail() : "";
+            String userName = (user != null && user.getDisplayName() != null) ? user.getDisplayName() :
+                    (userEmail.isEmpty() ? "User-" + userId.substring(0, 5) : userEmail.split("@")[0]);
+
+            // Create annonce object with all data
             Map<String, Object> annonce = new HashMap<>();
             annonce.put("titre", titre);
             annonce.put("description", description);
             annonce.put("imageBase64", base64Image);
             annonce.put("latitude", latitude);
             annonce.put("longitude", longitude);
-            annonce.put("timestamp", System.currentTimeMillis());
 
-            // Add to Firestore
+            // Add address information
+            annonce.put("street", street);
+            annonce.put("city", city);
+            annonce.put("country", country);
+            annonce.put("fullAddress", fullAddress);
+
+            annonce.put("timestamp", System.currentTimeMillis());
+            annonce.put("ownerID", userId);
+            annonce.put("ownerName", userName);
+            annonce.put("ownerEmail", userEmail);
+
+            // Add the annonce to Firestore
             annoncesRef.add(annonce)
                     .addOnSuccessListener(documentReference -> {
                         Log.d(TAG, "Annonce added with ID: " + documentReference.getId());
                         Toast.makeText(AjouterAnnonceActivity.this,
                                 "Annonce ajoutée avec succès!",
                                 Toast.LENGTH_SHORT).show();
-                        finish(); // Close the activity
+
+                        // Return to the previous activity
+                        finish();
                     })
                     .addOnFailureListener(e -> {
-                        Log.e(TAG, "Error adding annonce to Firestore: " + e.getMessage(), e);
+                        Log.e(TAG, "Error adding annonce: " + e.getMessage(), e);
                         Toast.makeText(AjouterAnnonceActivity.this,
-                                "Erreur Firestore: " + e.getMessage(),
+                                "Erreur: " + e.getMessage(),
                                 Toast.LENGTH_SHORT).show();
+
+                        // Re-enable save button on failure
+                        btnSaveAnnonce.setEnabled(true);
                     });
+
         } catch (Exception e) {
-            Log.e(TAG, "Error in saveAnnonce: " + e.getMessage(), e);
+            Log.e(TAG, "Exception in saveAnnonce: " + e.getMessage(), e);
             Toast.makeText(this, "Erreur: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            btnSaveAnnonce.setEnabled(true);
         }
     }
 
@@ -308,11 +373,12 @@ public class AjouterAnnonceActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_CAMERA_PERMISSION &&
-                grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Permission appareil photo accordée", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, "Permission appareil photo refusée", Toast.LENGTH_SHORT).show();
+        if (requestCode == REQUEST_CAMERA_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Permission appareil photo accordée", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Permission appareil photo refusée", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 }

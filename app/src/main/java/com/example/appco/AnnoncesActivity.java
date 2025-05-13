@@ -100,12 +100,12 @@ public class AnnoncesActivity extends AppCompatActivity {
                                     annonce.setOwnerName(document.getString("ownerName"));
                                 }
 
-                                if (document.contains("ownerEmail")) {
-                                    annonce.setOwnerEmail(document.getString("ownerEmail"));
-                                }
+                                //if (document.contains("ownerEmail")) {
+                                  //  annonce.setOwnerEmail(document.getString("ownerEmail"));
+                                //}
 
-                                if (document.contains("ownerProfileImage")) {
-                                    annonce.setOwnerProfileImage(document.getString("ownerProfileImage"));
+                                if (document.contains("ownerId")) {  // <-- Add this line
+                                    annonce.setOwnerId(document.getString("ownerId"));  // <-- Set the ownerId
                                 }
 
                                 // Handle rating if available

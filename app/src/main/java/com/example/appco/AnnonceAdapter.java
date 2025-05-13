@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Base64;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,6 +22,7 @@ import java.util.List;
 
 public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceViewHolder> {
 
+    private static final String TAG = "AnnonceAdapter";
     private List<Annonce> annonces;
     private Context context;
 
@@ -43,6 +45,19 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
         holder.description.setText(annonce.getDescription());
         holder.ratingBar.setRating(annonce.getRating());
 
+        // Display owner name if available
+        if (holder.ownerName != null) {
+            String ownerNameText = annonce.getOwnerName();
+            if (ownerNameText != null && !ownerNameText.isEmpty()) {
+                holder.ownerName.setText("Par: " + ownerNameText);
+                holder.ownerName.setVisibility(View.VISIBLE);
+                Log.d(TAG, "Owner name displayed: " + ownerNameText);
+            } else {
+                holder.ownerName.setVisibility(View.GONE);
+                Log.d(TAG, "Owner name not available for annonce: " + annonce.getId());
+            }
+        }
+
         // Load image based on what's available
         if (annonce.getImageUrl() != null && !annonce.getImageUrl().isEmpty()) {
             // Use Glide to load image from URL
@@ -58,6 +73,7 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
                 holder.image.setImageBitmap(decodedBitmap);
             } catch (Exception e) {
                 // Use default image on error
+                Log.e(TAG, "Error decoding base64 image: " + e.getMessage());
                 holder.image.setImageResource(R.drawable.ic_launcher_background);
             }
         } else {
@@ -69,6 +85,10 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, AnnonceDetailsActivity.class);
             intent.putExtra("annonceId", annonce.getId());
+            // Pass owner information too if needed in details
+            intent.putExtra("ownerName", annonce.getOwnerName());
+            intent.putExtra("ownerEmail", annonce.getOwnerEmail());
+            intent.putExtra("ownerId", annonce.getOwnerId());
             context.startActivity(intent);
         });
     }
@@ -85,7 +105,7 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
 
     static class AnnonceViewHolder extends RecyclerView.ViewHolder {
         ImageView image;
-        TextView titre, description;
+        TextView titre, description, ownerName;
         RatingBar ratingBar;
 
         public AnnonceViewHolder(@NonNull View itemView) {
@@ -94,6 +114,8 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
             titre = itemView.findViewById(R.id.titreAnnonce);
             description = itemView.findViewById(R.id.descriptionAnnonce);
             ratingBar = itemView.findViewById(R.id.ratingAnnonce);
+            // Find ownerName TextView if it exists in your layout
+            ownerName = itemView.findViewById(R.id.ownerNameText);
         }
     }
 }
