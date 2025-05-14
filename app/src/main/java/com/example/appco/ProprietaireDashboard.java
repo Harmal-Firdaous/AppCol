@@ -44,7 +44,7 @@ public class ProprietaireDashboard extends AppCompatActivity {
 
 
         btnMessages.setOnClickListener(v -> {
-            startActivity(new Intent(this, Messagerie.class));
+            startActivity(new Intent(this, Message.class));
         });
 
         btnPaiements.setOnClickListener(v -> {

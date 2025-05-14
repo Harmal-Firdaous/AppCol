@@ -47,7 +47,8 @@ public class AnnoncesActivity extends AppCompatActivity {
 
         // Initialize empty list and adapter
         annonceList = new ArrayList<>();
-        adapter = new AnnonceAdapter(annonceList);
+        // Updated line: Added 'this' as the second parameter to pass the context
+        adapter = new AnnonceAdapter(annonceList, this);
         recyclerView.setAdapter(adapter);
 
         // Load data from Firestore
@@ -101,7 +102,7 @@ public class AnnoncesActivity extends AppCompatActivity {
                                 }
 
                                 //if (document.contains("ownerEmail")) {
-                                  //  annonce.setOwnerEmail(document.getString("ownerEmail"));
+                                //  annonce.setOwnerEmail(document.getString("ownerEmail"));
                                 //}
 
                                 if (document.contains("ownerId")) {  // <-- Add this line

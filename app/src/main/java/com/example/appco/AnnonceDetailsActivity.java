@@ -167,7 +167,7 @@ public class AnnonceDetailsActivity extends AppCompatActivity {
 
             // Listener bouton contacter
             buttonContacter.setOnClickListener(v -> {
-                Intent messagerieIntent = new Intent(this, Messagerie.class);
+                Intent messagerieIntent = new Intent(this, Message.class);
                 messagerieIntent.putExtra("receiverId", ownerId != null ? ownerId : "");
                 messagerieIntent.putExtra("receiverName", ownerName != null ? ownerName : "Propriétaire");
                 messagerieIntent.putExtra("receiverEmail", ownerEmail != null ? ownerEmail : "");

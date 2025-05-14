@@ -26,14 +26,16 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
     private List<Annonce> annonces;
     private Context context;
 
-    public AnnonceAdapter(List<Annonce> annonces) {
+    // Updated constructor to accept Context as the second parameter
+    public AnnonceAdapter(List<Annonce> annonces, Context context) {
         this.annonces = annonces;
+        this.context = context;
     }
 
     @NonNull
     @Override
     public AnnonceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        context = parent.getContext();
+        // We already have the context from the constructor, so we don't need to get it from parent
         View view = LayoutInflater.from(context).inflate(R.layout.item_annonce, parent, false);
         return new AnnonceViewHolder(view);
     }
