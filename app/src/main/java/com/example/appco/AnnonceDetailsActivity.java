@@ -93,11 +93,11 @@ public class AnnonceDetailsActivity extends AppCompatActivity {
                 locationBuilder.append(country);
             }
             if (city != null && !city.trim().isEmpty()) {
-                if (locationBuilder.length() > 0) locationBuilder.append(" ");
+                if (locationBuilder.length() > 0) locationBuilder.append(", ");
                 locationBuilder.append(city);
             }
             if (street != null && !street.trim().isEmpty()) {
-                if (locationBuilder.length() > 0) locationBuilder.append(" ");
+                if (locationBuilder.length() > 0) locationBuilder.append(", ");
                 locationBuilder.append(street);
             }
 
@@ -165,15 +165,41 @@ public class AnnonceDetailsActivity extends AppCompatActivity {
             }
             ratingAnnonce.setRating(rating);
 
+            // Capture the document ID for the annonce
+            final String annonceDocId = document.getId();
+
             // Listener bouton contacter
             buttonContacter.setOnClickListener(v -> {
-                Intent messagerieIntent = new Intent(this, Message.class);
-                messagerieIntent.putExtra("receiverId", ownerId != null ? ownerId : "");
-                messagerieIntent.putExtra("receiverName", ownerName != null ? ownerName : "Propriétaire");
-                messagerieIntent.putExtra("receiverEmail", ownerEmail != null ? ownerEmail : "");
-                messagerieIntent.putExtra("annonceId", document.getId());
-                messagerieIntent.putExtra("annonceTitre", titre != null ? titre : "Sans titre");
-                startActivity(messagerieIntent);
+                try {
+                    // Ensure we have a valid ownerId
+                    String safeOwnerId = (ownerId != null && !ownerId.isEmpty()) ? ownerId : "unknown_user";
+
+                    // Log what we're trying to do
+                    Log.d(TAG, "Attempting to open ChatActivity with receiverId: " + safeOwnerId);
+
+                    // Create the intent with explicit component name
+                    Intent messagerieIntent = new Intent(AnnonceDetailsActivity.this, ChatActivity.class);
+
+                    // Add necessary extras
+                    messagerieIntent.putExtra("receiverId", safeOwnerId);
+                    messagerieIntent.putExtra("receiverName", ownerName != null ? ownerName : "Propriétaire");
+                    messagerieIntent.putExtra("receiverEmail", ownerEmail != null ? ownerEmail : "");
+                    messagerieIntent.putExtra("annonceId", annonceDocId);
+                    messagerieIntent.putExtra("annonceTitre", titre != null ? titre : "Sans titre");
+
+                    // Add flags to create a new task if needed
+                    messagerieIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+                    // Start the activity and track success
+                    startActivity(messagerieIntent);
+                    Log.d(TAG, "ChatActivity started successfully");
+                } catch (Exception e) {
+                    // Log and display any errors
+                    Log.e(TAG, "Failed to start ChatActivity", e);
+                    Toast.makeText(AnnonceDetailsActivity.this,
+                            "Impossible d'ouvrir le chat: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                }
             });
 
         } catch (Exception e) {
